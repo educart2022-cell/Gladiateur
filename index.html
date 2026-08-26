@@ -21,6 +21,30 @@
 
     body {
       font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+      background: radial-gradien…
+[4:04 PM, 26/08/2026] Atef: <!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>AR + Robot Animé 3D & Musique</title>
+
+  <!-- Model-Viewer -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.157.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.157.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
       background: radial-gradient(circle at 20% 30%, #1a1a3a, #0a0a12);
       color: #fff;
       min-height: 100vh;
@@ -416,7 +440,7 @@
       }
     });
 
-    // --- Gestion Animation Model-Viewer ---
+    // --- Gestion des animations ---
     let animationNames = [];
 
     function populateAnimations() {
@@ -433,18 +457,22 @@
         option.textContent = name;
         animSelect.appendChild(option);
       });
+      // Sélectionne la première par défaut
       if (animationNames.length > 0) {
         animSelect.value = animationNames[0];
+        // On ne lance pas automatiquement, on laisse l'utilisateur décider
+        animPlayBtn.textContent = '▶️ Jouer';
       }
     }
 
+    // Écouter le chargement du modèle
     modelViewer.addEventListener('load', () => {
       populateAnimations();
-      if (animationNames.length > 0) {
-        animPlayBtn.textContent = '▶️ Jouer';
-      }
+      // Si une animation existe, on pourrait lancer la première automatiquement ?
+      // On choisit de ne pas le faire pour laisser le contrôle à l'utilisateur.
     });
 
+    // Fonction pour jouer l'animation sélectionnée
     function playAnimation() {
       const selected = animSelect.value;
       if (!selected) {
@@ -452,11 +480,21 @@
         return;
       }
       try {
+        // Définir le nom de l'animation
         modelViewer.animationName = selected;
+        // Lancer la lecture
         modelViewer.play();
         animPlayBtn.textContent = '⏸️ Pause';
       } catch (e) {
         console.warn('Erreur lecture animation :', e);
+        // Fallback : essayer de définir l'attribut et jouer
+        try {
+          modelViewer.setAttribute('animation-name', selected);
+          modelViewer.play();
+          animPlayBtn.textContent = '⏸️ Pause';
+        } catch (e2) {
+          alert('Impossible de jouer l\'animation.');
+        }
       }
     }
 
@@ -479,6 +517,7 @@
         alert('Le modèle n\'est pas encore chargé.');
         return;
       }
+      // Vérifier si l'animation est en cours via la propriété isPlaying
       const isAnimPlaying = modelViewer.isPlaying;
       if (isAnimPlaying) {
         pauseAnimation();
@@ -487,24 +526,28 @@
       }
     }
 
+    // Événements des boutons
     animPlayBtn.addEventListener('click', toggleAnimation);
     animStopBtn.addEventListener('click', stopAnimation);
+
+    // Quand l'utilisateur change d'animation, on arrête la précédente
     animSelect.addEventListener('change', () => {
       stopAnimation();
     });
 
+    // Écouter la fin de l'animation pour mettre à jour le bouton
     modelViewer.addEventListener('finished', () => {
       animPlayBtn.textContent = '▶️ Jouer';
     });
 
-    // Déverrouillage audio iOS
+    // Déverrouillage audio sur iOS (premier clic)
     document.addEventListener('click', function unlockAudio() {
       if (audio.paused && audio.src) {
         audio.play().then(() => { audio.pause(); isPlaying = false; updateUI(); }).catch(() => {});
       }
     }, { once: false });
 
-    console.log('AR Robot animé prêt.');
+    console.log('AR Robot animé prêt. Animations disponibles :', animationNames);
   })();
 </script>
 
