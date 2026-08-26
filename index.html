@@ -1,4 +1,27 @@
-<!DOCTYPE html>
+[5:58 PM, 25/08/2026] Atef: <!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AR 3D - Surface Plane + Musique + GLB Animé</title>
+    <style>
+        :root {
+            --bg: #0a0a14;
+            --surface: #141428;
+            --primary: #7c5cfc;
+            --primary-glow: #9d80ff;
+            --accent: #00e5a0;
+            --text: #e8e8f0;
+            --text-secondary: #a0a0b8;
+            --danger: #ff4d6a;
+            --radius: 16px;
+            --radius-sm: 10px;
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', 'Segoe UI', system-…
+[8:21 PM, 25/08/2026] Atef: <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -17,507 +40,365 @@
             --text-primary: #f0f0f5;
             --text-secondary: #b0b0c0;
             --accent: #6c5ce7;
-            --accent-glow: rgba(108, 92, 231, 0.5);
-            --success: #00d2a0;
-            --danger: #ff4757;
-            --music1: #ff6b81;
-            --music2: #4ecdc4;
-            --border-radius: 16px;
-            --button-radius: 50px;
-        }
+            --accent-g…
+[9:16 PM, 25/08/2026] Atef: Génère un site web utilisant la réalité augmentée en plaçant un objet 3d glb ayant une animation de son squelette et en le plaçant sur une surface plane réelle avec deux musiques de fond au choix et fonctionnant sur iOS  16 et plus et Android
+[9:40 PM, 25/08/2026] Atef: https://zgb1ua-14jg3n3uz-arcadawebapps3.vercel.app
+[6:28 AM, 26/08/2026] Atef: <!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>AR Animé 3D – Compatible iOS 13+</title>
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
+    <!-- Import du composant model-viewer -->
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
 
-        html, body {
-            width: 100%;
-            height: 100%;
+    <style>
+        :root {
+            --bg-dark: #0a0a0f;
+            --bg-panel: rgba(20, 20, 30, 0.85);
+            --text-primary: #f0f0f5;
+            --text-secondary: #b0b0c0;
+            --accent: #6c5ce7;
+            --accent-g…
+[1:12 PM, 26/08/2026] Atef: <!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AR - Modèle 3D Animé</title>
+    <!-- Import du composant model-viewer -->
+    <script type="importmap">
+        {
+            "imports": {
+                "@google/model-viewer": "https://cdn.jsdelivr.net/npm/@google/model-viewer@4.0.0/dist/model-viewer.min.js"
+            }
+        }
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #111;
+            color: white;
             overflow: hidden;
-            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text-primary);
-            touch-action: manipulation;
+            height: 100vh;
+            width: 100vw;
             user-select: none;
-            -webkit-user-select: none;
-            -webkit-touch-callout: none;
-            position: fixed;
-            overscroll-behavior: none;
         }
-
-        /* ---- Modèle 3D en arrière-plan ---- */
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: #1a1a1a;
+        }
         model-viewer {
-            position: fixed;
-            top: 0;
-            left: 0;
             width: 100%;
             height: 100%;
-            z-index: 0;
             background: transparent;
-            --poster-color: transparent;
-            --progress-bar-color: var(--accent);
-            --progress-bar-height: 4px;
         }
-
-        /* ---- UI Overlay ---- */
-        #ui-overlay {
-            position: fixed;
-            top: 0;
+        /* Contrôles audio en overlay */
+        #audio-controls {
+            position: absolute;
+            bottom: 30px;
             left: 0;
             width: 100%;
-            height: 100%;
-            z-index: 10;
-            pointer-events: none;
             display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: env(safe-area-inset-top, 16px) 16px env(safe-area-inset-bottom, 16px);
+            justify-content: center;
+            gap: 20px;
+            padding: 15px;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            z-index: 10;
+            flex-wrap: wrap;
         }
-
-        #ui-overlay > * {
-            pointer-events: auto;
-        }
-
-        .top-bar {
+        .audio-btn {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 12px 28px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            padding: 12px 16px;
-            background: var(--bg-panel);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-radius: var(--border-radius);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            gap: 10px;
+            min-width: 140px;
+            justify-content: center;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
-
-        .app-title {
+        .audio-btn:active { transform: scale(0.95); }
+        .audio-btn.playing {
+            background: rgba(255, 215, 0, 0.25);
+            border-color: #ffd700;
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.2);
+        }
+        .audio-btn .icon { font-size: 20px; }
+        .audio-btn .label { font-size: 13px; opacity: 0.9; }
+        #status {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-size: 13px;
+            color: #aaa;
+            z-index: 10;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        #ar-prompt {
+            position: absolute;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 150, 255, 0.2);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            padding: 10px 24px;
+            border-radius: 30px;
+            font-size: 14px;
+            color: #8ab4f8;
+            z-index: 10;
+            border: 1px solid rgba(0, 150, 255, 0.3);
+            text-align: center;
+            pointer-events: none;
+        }
+        @media (max-width: 600px) {
+            .audio-btn { padding: 10px 18px; font-size: 14px; min-width: 110px; }
+            #status { font-size: 11px; padding: 5px 14px; white-space: normal; }
+            #ar-prompt { font-size: 12px; padding: 6px 16px; bottom: 110px; }
+        }
+        /* Cache le bouton AR par défaut pour le personnaliser */
+        model-viewer::part(default-ar-button) { display: none; }
+        #custom-ar-btn {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a73e8;
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            border-radius: 50px;
             font-size: 18px;
             font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .app-title .icon {
-            font-size: 24px;
-            animation: pulse-icon 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse-icon {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.15); }
-        }
-
-        .status-badge {
-            font-size: 12px;
-            padding: 6px 14px;
-            border-radius: 50px;
-            background: rgba(255, 255, 255, 0.08);
-            color: var(--text-secondary);
-            letter-spacing: 0.5px;
-            font-weight: 500;
+            cursor: pointer;
+            z-index: 20;
+            box-shadow: 0 8px 30px rgba(26, 115, 232, 0.4);
             transition: all 0.3s ease;
+            letter-spacing: 0.5px;
+            display: none; /* affiché dynamiquement si AR dispo */
         }
-
-        .status-badge.active {
-            background: rgba(0, 210, 160, 0.15);
-            color: var(--success);
-            border: 1px solid rgba(0, 210, 160, 0.3);
-        }
-        .status-badge.error {
-            background: rgba(255, 71, 87, 0.15);
-            color: var(--danger);
-            border: 1px solid rgba(255, 71, 87, 0.3);
-        }
-        .status-badge.loading {
-            background: rgba(108, 92, 231, 0.15);
-            color: var(--accent);
-            border: 1px solid rgba(108, 92, 231, 0.3);
-            animation: blink 1.5s ease-in-out infinite;
-        }
-
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
-        }
-
-        .bottom-panel {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            padding: 16px;
-            background: var(--bg-panel);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-radius: var(--border-radius);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            max-width: 500px;
-            margin: 0 auto;
-            width: 100%;
-        }
-
-        .music-section {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .music-label {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            text-align: center;
-        }
-
-        .music-buttons {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .music-btn {
-            flex: 1;
-            min-width: 120px;
-            max-width: 200px;
-            padding: 14px 20px;
-            border-radius: var(--button-radius);
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            background: rgba(255, 255, 255, 0.04);
-            color: var(--text-primary);
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            letter-spacing: 0.3px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .music-btn::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            border-radius: inherit;
-            background: radial-gradient(circle at center, rgba(255, 255, 255, 0.1), transparent);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .music-btn:hover::after { opacity: 1; }
-        .music-btn:active { transform: scale(0.96); }
-
-        .music-btn .music-icon { font-size: 20px; }
-        .music-btn .equalizer {
-            display: none;
-            gap: 3px;
-            align-items: flex-end;
-            height: 16px;
-        }
-        .music-btn .equalizer span {
-            width: 3px;
-            background: currentColor;
-            border-radius: 2px;
-            animation: eq-bounce 0.5s ease-in-out infinite alternate;
-        }
-        .music-btn .equalizer span:nth-child(1) { height: 40%; animation-delay: 0s; }
-        .music-btn .equalizer span:nth-child(2) { height: 100%; animation-delay: 0.15s; }
-        .music-btn .equalizer span:nth-child(3) { height: 60%; animation-delay: 0.3s; }
-        .music-btn .equalizer span:nth-child(4) { height: 80%; animation-delay: 0.1s; }
-
-        @keyframes eq-bounce {
-            from { transform: scaleY(0.4); }
-            to { transform: scaleY(1); }
-        }
-
-        .music-btn.active-music-1 {
-            border-color: var(--music1);
-            background: rgba(255, 107, 129, 0.12);
-            box-shadow: 0 0 25px rgba(255, 107, 129, 0.3);
-            color: var(--music1);
-        }
-        .music-btn.active-music-1 .music-icon { display: none; }
-        .music-btn.active-music-1 .equalizer { display: flex; color: var(--music1); }
-
-        .music-btn.active-music-2 {
-            border-color: var(--music2);
-            background: rgba(78, 205, 196, 0.12);
-            box-shadow: 0 0 25px rgba(78, 205, 196, 0.3);
-            color: var(--music2);
-        }
-        .music-btn.active-music-2 .music-icon { display: none; }
-        .music-btn.active-music-2 .equalizer { display: flex; color: var(--music2); }
-
-        .ar-actions {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .ar-btn {
-            padding: 14px 24px;
-            border-radius: var(--button-radius);
-            border: none;
-            font-size: 15px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            letter-spacing: 0.3px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            min-width: 140px;
-            background: var(--accent);
-            color: #fff;
-            box-shadow: 0 4px 20px var(--accent-glow);
-        }
-
-        .ar-btn:active { transform: scale(0.95); }
-        .ar-btn:hover {
-            box-shadow: 0 6px 30px var(--accent-glow);
-            transform: translateY(-2px);
-        }
-        .ar-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .instructions {
-            text-align: center;
-            font-size: 13px;
-            color: var(--text-secondary);
-            line-height: 1.6;
-            letter-spacing: 0.3px;
-            padding: 4px 0;
-        }
-        .instructions .highlight {
-            color: var(--accent);
-            font-weight: 600;
-        }
-
-        /* ---- Responsive ---- */
-        @media (max-width: 480px) {
-            .top-bar { padding: 10px 14px; }
-            .app-title { font-size: 15px; }
-            .bottom-panel { padding: 12px; gap: 10px; }
-            .music-btn { padding: 12px 16px; font-size: 13px; min-width: 100px; }
-            .ar-btn { padding: 12px 18px; font-size: 13px; min-width: 110px; }
-            .instructions { font-size: 11px; }
-        }
-
-        @media (min-width: 768px) {
-            .bottom-panel { border-radius: 20px; }
-            .top-bar { max-width: 500px; margin: 0 auto; border-radius: 20px; }
-        }
-
-        @media (orientation: landscape) and (max-height: 500px) {
-            .bottom-panel { flex-direction: row; align-items: center; gap: 8px; padding: 8px 12px; }
-            .music-section { flex-direction: row; align-items: center; gap: 8px; }
-            .music-label { display: none; }
-            .music-btn { padding: 8px 14px; font-size: 12px; min-width: 80px; }
-            .ar-btn { padding: 8px 14px; font-size: 12px; min-width: 90px; }
-            .instructions { display: none; }
-        }
+        #custom-ar-btn:active { transform: scale(0.95); }
+        #custom-ar-btn.show { display: block; }
     </style>
 </head>
 <body>
 
-    <!-- Modèle 3D affiché en permanence -->
+<div id="container">
+    <!-- Statut -->
+    <div id="status">🔍 Chargement du modèle 3D...</div>
+
+    <!-- Lecteur 3D avec AR -->
     <model-viewer
-        id="model-viewer"
-        src="https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@main/2.0/Fox/glTF-Binary/Fox.glb"
-        ios-src="https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@main/2.0/Fox/glTF-Binary/Fox.usdz"
-        alt="Modèle 3D animé d'un renard"
+        id="mv"
+        src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/RiggedSimple/RiggedSimple.glb"
+        alt="Modèle 3D animé"
         ar
         ar-modes="webxr scene-viewer quick-look"
         camera-controls
-        touch-action="pan-y"
-        animation-name="Survey"
         autoplay
-        shadow-intensity="1"
-        exposure="1"
-        style="--progress-bar-color: #6c5ce7;"
+        shadow-intensity="0.6"
+        environment-image="neutral"
+        exposure="1.0"
+        style="width:100%; height:100%;"
+        loading="eager"
+        reveal="auto"
     >
-        <div class="progress-bar" slot="progress-bar">
-            <div class="update-bar"></div>
-        </div>
     </model-viewer>
 
-    <!-- UI Overlay -->
-    <div id="ui-overlay">
-        <!-- Top Bar -->
-        <div class="top-bar">
-            <div class="app-title">
-                <span class="icon">✨</span>
-                <span>AR Animé 3D</span>
-            </div>
-            <div class="status-badge" id="status-badge">Prêt</div>
-        </div>
+    <!-- Bouton AR personnalisé -->
+    <button id="custom-ar-btn">📱 Voir en Réalité Augmentée</button>
 
-        <!-- Bottom Panel -->
-        <div class="bottom-panel">
-            <!-- Music Section -->
-            <div class="music-section">
-                <div class="music-label">🎵 Musique de fond</div>
-                <div class="music-buttons">
-                    <button class="music-btn" id="music-btn-1" aria-label="Musique 1">
-                        <span class="music-icon">🎶</span>
-                        <span class="equalizer"><span></span><span></span><span></span><span></span></span>
-                        <span>Piste 1</span>
-                    </button>
-                    <button class="music-btn" id="music-btn-2" aria-label="Musique 2">
-                        <span class="music-icon">🎵</span>
-                        <span class="equalizer"><span></span><span></span><span></span><span></span></span>
-                        <span>Piste 2</span>
-                    </button>
-                </div>
-            </div>
+    <!-- Invite AR -->
+    <div id="ar-prompt">👆 Placez l'objet sur une surface plane</div>
 
-            <!-- AR Action Button -->
-            <div class="ar-actions">
-                <button class="ar-btn" id="ar-btn">
-                    <span>📱</span> Voir en AR
-                </button>
-            </div>
-
-            <!-- Instructions -->
-            <div class="instructions" id="instructions">
-                <span class="highlight">Astuce :</span> Cliquez sur « Voir en AR » puis scannez une surface plane pour placer le modèle animé.
-            </div>
-        </div>
+    <!-- Contrôles audio -->
+    <div id="audio-controls">
+        <button class="audio-btn" id="track1" data-track="0">
+            <span class="icon">🎵</span>
+            <span class="label">Musique 1</span>
+        </button>
+        <button class="audio-btn" id="track2" data-track="1">
+            <span class="icon">🎶</span>
+            <span class="label">Musique 2</span>
+        </button>
+        <button class="audio-btn" id="stop-btn">
+            <span class="icon">⏹️</span>
+            <span class="label">Stop</span>
+        </button>
     </div>
+</div>
 
-    <script>
-        (function() {
-            // ---- Éléments DOM ----
-            const modelViewer = document.getElementById('model-viewer');
-            const statusBadge = document.getElementById('status-badge');
-            const arBtn = document.getElementById('ar-btn');
-            const musicBtn1 = document.getElementById('music-btn-1');
-            const musicBtn2 = document.getElementById('music-btn-2');
-            const instructions = document.getElementById('instructions');
+<script type="module">
+    // ---- Initialisation ----
+    import "@google/model-viewer";
 
-            // ---- Gestion de la musique ----
-            const tracks = [
-                { url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', name: 'Piste 1' },
-                { url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3', name: 'Piste 2' }
-            ];
-            const audioElements = {};
-            let activeMusicIndex = null;
-            let audioInitialized = false;
+    const modelViewer = document.getElementById('mv');
+    const statusEl = document.getElementById('status');
+    const arPrompt = document.getElementById('ar-prompt');
+    const customArBtn = document.getElementById('custom-ar-btn');
 
-            function initAudio() {
-                if (audioInitialized) return;
-                audioInitialized = true;
-                tracks.forEach((track, index) => {
-                    const audio = new Audio(track.url);
-                    audio.loop = true;
-                    audio.preload = 'auto';
-                    audio.volume = 0.6;
-                    audio.crossOrigin = 'anonymous';
-                    audioElements[index] = audio;
-                });
+    // ---- Gestion audio ----
+    // Deux pistes libres de droit (Kevin MacLeod)
+    const tracks = [
+        'https://upload.wikimedia.org/wikipedia/commons/transcoded/e/e4/Kevin_MacLeod_-_Wallpaper.ogg/Kevin_MacLeod_-_Wallpaper.ogg.mp3',
+        'https://upload.wikimedia.org/wikipedia/commons/transcoded/8/8e/Kevin_MacLeod_-_Winter_Wonderland.ogg/Kevin_MacLeod_-_Winter_Wonderland.ogg.mp3'
+    ];
+    const trackNames = ['Musique 1', 'Musique 2'];
+
+    let currentAudio = null;
+    let currentTrackIndex = -1;
+
+    function createAudio(src) {
+        const audio = new Audio(src);
+        audio.loop = true;
+        audio.volume = 0.6;
+        return audio;
+    }
+
+    function playTrack(index) {
+        stopAudio();
+        if (index < 0 || index >= tracks.length) return;
+        const audio = createAudio(tracks[index]);
+        audio.play().catch(e => console.warn('Lecture audio bloquée:', e));
+        currentAudio = audio;
+        currentTrackIndex = index;
+        updateButtons(index);
+        statusEl.textContent = ▶️ ${trackNames[index]} en cours;
+    }
+
+    function stopAudio() {
+        if (currentAudio) {
+            currentAudio.pause();
+            currentAudio.currentTime = 0;
+            currentAudio = null;
+        }
+        currentTrackIndex = -1;
+        updateButtons(-1);
+        statusEl.textContent = '⏸️ Audio arrêté';
+    }
+
+    function updateButtons(activeIndex) {
+        document.querySelectorAll('.audio-btn').forEach(btn => {
+            btn.classList.remove('playing');
+            const idx = parseInt(btn.dataset.track);
+            if (!isNaN(idx) && idx === activeIndex) {
+                btn.classList.add('playing');
             }
+        });
+    }
 
-            function toggleMusic(index) {
-                if (!audioInitialized) initAudio();
-                if (activeMusicIndex === index) {
-                    audioElements[index].pause();
-                    activeMusicIndex = null;
-                    updateMusicButtons();
+    // Événements des boutons audio
+    document.getElementById('track1').addEventListener('click', () => playTrack(0));
+    document.getElementById('track2').addEventListener('click', () => playTrack(1));
+    document.getElementById('stop-btn').addEventListener('click', stopAudio);
+
+    // ---- Gestion du modèle 3D ----
+    modelViewer.addEventListener('load', () => {
+        statusEl.textContent = '✅ Modèle chargé – Appuyez sur "Voir en AR"';
+        // Vérifier la disponibilité AR
+        checkARSupport();
+    });
+
+    modelViewer.addEventListener('error', (e) => {
+        statusEl.textContent = '❌ Erreur chargement modèle';
+        console.error('Erreur model-viewer:', e);
+    });
+
+    // ---- Détection AR et affichage du bouton ----
+    async function checkARSupport() {
+        try {
+            // Vérifie si WebXR est supporté
+            if (navigator.xr) {
+                const isSupported = await navigator.xr.isSessionSupported('immersive-ar');
+                if (isSupported) {
+                    customArBtn.classList.add('show');
+                    statusEl.textContent = '✅ AR disponible – Appuyez sur le bouton';
                     return;
                 }
-                Object.values(audioElements).forEach(a => a.pause());
-                const audio = audioElements[index];
-                if (audio) {
-                    audio.play().catch(err => console.warn('Audio refusé, réessai...', err));
-                    activeMusicIndex = index;
-                }
-                updateMusicButtons();
             }
-
-            function updateMusicButtons() {
-                musicBtn1.classList.toggle('active-music-1', activeMusicIndex === 0);
-                musicBtn2.classList.toggle('active-music-2', activeMusicIndex === 1);
-                const btn1Label = musicBtn1.querySelector('span:last-child');
-                const btn2Label = musicBtn2.querySelector('span:last-child');
-                if (btn1Label) btn1Label.textContent = activeMusicIndex === 0 ? 'Lecture' : 'Piste 1';
-                if (btn2Label) btn2Label.textContent = activeMusicIndex === 1 ? 'Lecture' : 'Piste 2';
+            // Fallback : Scene Viewer / Quick Look via model-viewer
+            // On teste en simulant un clic sur le bouton AR natif
+            const arButton = modelViewer.shadowRoot?.querySelector('.ar-button');
+            if (arButton && !arButton.hasAttribute('hidden')) {
+                customArBtn.classList.add('show');
+                statusEl.textContent = '✅ AR disponible (Scene Viewer/Quick Look)';
+                return;
             }
+            // Si on arrive ici, l'AR n'est pas détectée
+            statusEl.textContent = '⚠️ AR non disponible sur ce navigateur';
+            arPrompt.textContent = '⚠️ La RA n\'est pas supportée par ce navigateur';
+        } catch (e) {
+            console.warn('Erreur détection AR:', e);
+            statusEl.textContent = '⚠️ AR non disponible';
+        }
+    }
 
-            musicBtn1.addEventListener('click', () => toggleMusic(0));
-            musicBtn2.addEventListener('click', () => toggleMusic(1));
-
-            // ---- Mise à jour du statut ----
-            function setStatus(text, state) {
-                statusBadge.textContent = text;
-                statusBadge.className = 'status-badge';
-                if (state === 'active') statusBadge.classList.add('active');
-                if (state === 'error') statusBadge.classList.add('error');
-                if (state === 'loading') statusBadge.classList.add('loading');
-            }
-
-            // ---- Gestion de l'AR ----
-            arBtn.addEventListener('click', () => {
-                // model-viewer déclenche automatiquement l'AR en fonction de l'appareil
-                // grâce aux attributs "ar" et "ar-modes".
-                if (modelViewer.canActivateAR) {
+    // ---- Action du bouton AR personnalisé ----
+    customArBtn.addEventListener('click', async () => {
+        try {
+            // Tente d'activer WebXR d'abord
+            if (navigator.xr) {
+                const supported = await navigator.xr.isSessionSupported('immersive-ar');
+                if (supported) {
                     modelViewer.activateAR();
-                    setStatus('AR lancé', 'active');
-                    instructions.innerHTML = '📱 Scannez une surface plane, puis touchez l\'écran pour placer le modèle.';
-                } else {
-                    setStatus('AR non disponible', 'error');
-                    instructions.innerHTML = '⚠️ Votre appareil ne supporte pas la réalité augmentée.';
+                    return;
                 }
-            });
-
-            // ---- Événements model-viewer ----
-            modelViewer.addEventListener('load', () => {
-                setStatus('Modèle chargé ✓', 'active');
-            });
-
-            modelViewer.addEventListener('error', (e) => {
-                console.error('Erreur de chargement du modèle:', e);
-                setStatus('Erreur de chargement', 'error');
-            });
-
-            // ---- Détection de la prise en charge AR ----
-            if (modelViewer.canActivateAR) {
-                setStatus('Prêt (AR disponible)', '');
-            } else {
-                setStatus('Visualisation 3D seulement', '');
-                arBtn.disabled = true;
-                arBtn.style.opacity = '0.5';
-                instructions.innerHTML = '⚠️ La réalité augmentée n\'est pas supportée sur ce navigateur, mais vous pouvez toujours visualiser le modèle en 3D.';
             }
+            // Fallback : tente de cliquer sur le bouton AR natif
+            const arButton = modelViewer.shadowRoot?.querySelector('.ar-button');
+            if (arButton) {
+                arButton.click();
+            } else {
+                // Dernier recours : l'attribut 'ar' devrait déclencher l'UI
+                modelViewer.activateAR();
+            }
+        } catch (e) {
+            console.error('Erreur activation AR:', e);
+            statusEl.textContent = '❌ Erreur: ' + e.message;
+        }
+    });
 
-            // ---- Reprise de la musique après retour de l'AR ----
-            document.addEventListener('visibilitychange', () => {
-                if (!document.hidden && activeMusicIndex !== null && audioElements[activeMusicIndex]) {
-                    audioElements[activeMusicIndex].play().catch(() => {});
-                }
-            });
+    // ---- Gestion du redimensionnement ----
+    window.addEventListener('resize', () => {
+        // Rien de spécial, model-viewer gère
+    });
 
-            // ---- Initialisation audio sur première interaction ----
-            document.body.addEventListener('pointerdown', initAudio, { once: true });
+    // ---- Nettoyage audio si la page est cachée ----
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden && currentAudio) {
+            currentAudio.pause();
+        } else if (!document.hidden && currentAudio && currentTrackIndex >= 0) {
+            currentAudio.play().catch(() => {});
+        }
+    });
 
-            console.log('✨ Application AR compatible iOS 13+ et Android');
-        })();
-    </script>
+    console.log('✅ WebAR prêt - Modèle 3D animé + 2 pistes audio');
+</script>
+
 </body>
 </html>
