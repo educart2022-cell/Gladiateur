@@ -1,554 +1,1617 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>AR + Robot Animé 3D & Musique</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>WebAR · Modèle 3D</title>
 
-  <!-- Model-Viewer -->
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://unpkg.com/three@0.157.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.157.0/examples/jsm/"
-      }
-    }
-  </script>
-  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+<!-- Three.js & extensions from CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js">
+</script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js">
+</script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js">
+</script>
 
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+<style>
+/* ----- RESET & BASE ----- */
+* {
+margin: 0;
+padding: 0;
+box-sizing: border-box;
+}
+html,
+body {
+width: 100%;
+height: 100%;
+overflow: hidden;
+font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+background: #0b0b0e;
+color: #f0f0f0;
+touch-action: none;
+user-select: none;
+-webkit-user-select: none;
+-webkit-touch-callout: none;
+position: fixed;
+}
 
-    body {
-      font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
-      background: radial-gradien…
-[4:04 PM, 26/08/2026] Atef: <!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>AR + Robot Animé 3D & Musique</title>
+/* ----- LOADING SCREEN ----- */
+#loading-screen {
+position: fixed;
+inset: 0;
+z-index: 1000;
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+background: #0b0b0e;
+transition: opacity 0.8s ease;
+}
+#loading-screen.hidden {
+opacity: 0;
+pointer-events: none;
+}
+#loading-screen .spinner {
+width: 48px;
+height: 48px;
+border: 4px solid rgba(255, 255, 255, 0.15);
+border-top-color: #6c8cff;
+border-radius: 50%;
+animation: spin 0.9s linear infinite;
+}
+@keyframes spin {
+to {
+transform: rotate(360deg);
+}
+}
+#loading-screen .progress-wrap {
+margin-top: 28px;
+width: min(220px, 60vw);
+height: 4px;
+background: rgba(255, 255, 255, 0.12);
+border-radius: 6px;
+overflow: hidden;
+}
+#loading-screen .progress-bar {
+height: 100%;
+width: 0%;
+background: linear-gradient(90deg, #6c8cff, #a78bfa);
+border-radius: 6px;
+transition: width 0.25s ease;
+}
+#loading-screen .status-text {
+margin-top: 14px;
+font-size: 14px;
+font-weight: 400;
+letter-spacing: 0.3px;
+color: rgba(255, 255, 255, 0.7);
+}
 
-  <!-- Model-Viewer -->
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://unpkg.com/three@0.157.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.157.0/examples/jsm/"
-      }
-    }
-  </script>
-  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+/* ----- AR VIEWPORT (Three.js canvas) ----- */
+#ar-container {
+position: fixed;
+inset: 0;
+z-index: 1;
+width: 100%;
+height: 100%;
+background: #0b0b0e;
+}
+#ar-container canvas {
+display: block;
+width: 100% !important;
+height: 100% !important;
+}
 
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+/* ----- OVERLAY UI ----- */
+.ui-overlay {
+position: fixed;
+z-index: 10;
+pointer-events: none;
+}
+.ui-overlay>* {
+pointer-events: auto;
+}
 
-    body {
-      font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
-      background: radial-gradient(circle at 20% 30%, #1a1a3a, #0a0a12);
-      color: #fff;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-    }
+/* Top-left: status + info */
+#status-panel {
+top: 16px;
+left: 16px;
+display: flex;
+flex-direction: column;
+gap: 6px;
+max-width: calc(100% - 120px);
+}
+#status-badge {
+display: inline-flex;
+align-items: center;
+gap: 8px;
+padding: 6px 14px 6px 12px;
+border-radius: 40px;
+background: rgba(0, 0, 0, 0.6);
+backdrop-filter: blur(10px);
+-webkit-backdrop-filter: blur(10px);
+border: 1px solid rgba(255, 255, 255, 0.08);
+font-size: 12px;
+font-weight: 500;
+letter-spacing: 0.2px;
+color: #d0d0d0;
+width: fit-content;
+}
+#status-badge .dot {
+width: 8px;
+height: 8px;
+border-radius: 50%;
+display: inline-block;
+flex-shrink: 0;
+}
+.dot.idle {
+background: #fbbf24;
+}
+.dot.ready {
+background: #34d399;
+}
+.dot.error {
+background: #f87171;
+}
+.dot.placing {
+background: #60a5fa;
+animation: pulse-dot 0.8s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+0%,
+100% {
+transform: scale(1);
+opacity: 1;
+}
+50% {
+transform: scale(1.4);
+opacity: 0.5;
+}
+}
 
-    .container {
-      max-width: 640px;
-      width: 100%;
-      background: rgba(255,255,255,0.06);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-radius: 32px;
-      padding: 24px 20px 32px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.08);
-    }
+#ar-message {
+font-size: 12px;
+color: rgba(255, 255, 255, 0.6);
+padding: 0 12px;
+line-height: 1.4;
+max-width: 280px;
+text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+#ar-message.warning {
+color: #fcd34d;
+}
+#ar-message.error {
+color: #f87171;
+}
 
-    h1 {
-      font-size: 1.7rem;
-      font-weight: 600;
-      text-align: center;
-      background: linear-gradient(135deg, #b7aaff, #7b6ef6);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      margin-bottom: 4px;
-    }
+/* Bottom-center: placement hint */
+#placement-hint {
+position: fixed;
+bottom: 40px;
+left: 50%;
+transform: translateX(-50%);
+z-index: 10;
+padding: 10px 22px;
+border-radius: 40px;
+background: rgba(0, 0, 0, 0.55);
+backdrop-filter: blur(10px);
+-webkit-backdrop-filter: blur(10px);
+border: 1px solid rgba(255, 255, 255, 0.08);
+font-size: 14px;
+font-weight: 500;
+color: #f0f0f0;
+text-align: center;
+pointer-events: none;
+transition: opacity 0.5s ease, transform 0.4s ease;
+white-space: nowrap;
+max-width: 90%;
+overflow: hidden;
+text-overflow: ellipsis;
+}
+#placement-hint.hidden {
+opacity: 0;
+transform: translateX(-50%) translateY(16px);
+pointer-events: none;
+}
 
-    .sub {
-      text-align: center;
-      color: rgba(255,255,255,0.5);
-      font-size: 0.9rem;
-      margin-bottom: 18px;
-    }
+/* Bottom-right: controls */
+#controls {
+position: fixed;
+bottom: 20px;
+right: 16px;
+z-index: 10;
+display: flex;
+flex-direction: column;
+gap: 10px;
+align-items: flex-end;
+}
+.ctrl-btn {
+width: 48px;
+height: 48px;
+border-radius: 50%;
+border: 1px solid rgba(255, 255, 255, 0.12);
+background: rgba(20, 20, 28, 0.7);
+backdrop-filter: blur(12px);
+-webkit-backdrop-filter: blur(12px);
+color: #e8e8e8;
+font-size: 20px;
+display: flex;
+align-items: center;
+justify-content: center;
+transition: background 0.2s, transform 0.15s;
+box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+cursor: pointer;
+touch-action: manipulation;
+}
+.ctrl-btn:active {
+transform: scale(0.92);
+background: rgba(40, 40, 56, 0.8);
+}
+.ctrl-btn.active {
+background: rgba(108, 140, 255, 0.35);
+border-color: rgba(108, 140, 255, 0.4);
+}
+.ctrl-btn .label {
+display: none;
+}
+.ctrl-btn svg {
+width: 22px;
+height: 22px;
+fill: currentColor;
+}
 
-    .model-wrapper {
-      position: relative;
-      width: 100%;
-      aspect-ratio: 1 / 1;
-      background: rgba(0,0,0,0.4);
-      border-radius: 24px;
-      overflow: hidden;
-      border: 1px solid rgba(255,255,255,0.08);
-      margin-bottom: 16px;
-    }
+/* Audio controls - expandable */
+#audio-controls {
+display: flex;
+flex-direction: column;
+gap: 8px;
+align-items: flex-end;
+}
+#audio-row {
+display: flex;
+gap: 8px;
+align-items: center;
+flex-wrap: wrap;
+justify-content: flex-end;
+}
+.audio-btn {
+padding: 6px 14px;
+border-radius: 30px;
+border: 1px solid rgba(255, 255, 255, 0.10);
+background: rgba(20, 20, 28, 0.55);
+backdrop-filter: blur(8px);
+-webkit-backdrop-filter: blur(8px);
+color: #d0d0d0;
+font-size: 12px;
+font-weight: 500;
+cursor: pointer;
+transition: background 0.2s, border-color 0.2s;
+touch-action: manipulation;
+white-space: nowrap;
+}
+.audio-btn:active {
+transform: scale(0.95);
+}
+.audio-btn.track-active {
+background: rgba(108, 140, 255, 0.25);
+border-color: rgba(108, 140, 255, 0.35);
+color: #fff;
+}
+.audio-btn.track-playing {
+background: rgba(52, 211, 153, 0.2);
+border-color: rgba(52, 211, 153, 0.3);
+}
+.audio-btn .badge {
+display: inline-block;
+margin-left: 4px;
+font-size: 10px;
+opacity: 0.6;
+}
 
-    model-viewer {
-      width: 100%;
-      height: 100%;
-      display: block;
-      --poster-color: transparent;
-    }
+/* Animation selector */
+#anim-selector {
+display: flex;
+gap: 6px;
+flex-wrap: wrap;
+justify-content: flex-end;
+margin-top: 2px;
+}
+.anim-btn {
+padding: 5px 12px;
+border-radius: 20px;
+border: 1px solid rgba(255, 255, 255, 0.08);
+background: rgba(20, 20, 28, 0.5);
+backdrop-filter: blur(6px);
+-webkit-backdrop-filter: blur(6px);
+color: #b0b0b0;
+font-size: 11px;
+font-weight: 500;
+cursor: pointer;
+transition: background 0.2s, color 0.2s;
+touch-action: manipulation;
+}
+.anim-btn:active {
+transform: scale(0.95);
+}
+.anim-btn.active-anim {
+background: rgba(167, 139, 250, 0.25);
+border-color: rgba(167, 139, 250, 0.3);
+color: #fff;
+}
 
-    .ar-btn {
-      position: absolute;
-      bottom: 16px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(123, 110, 246, 0.9);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      border: none;
-      color: #fff;
-      font-weight: 600;
-      font-size: 1.1rem;
-      padding: 14px 32px;
-      border-radius: 60px;
-      cursor: pointer;
-      box-shadow: 0 8px 24px rgba(123, 110, 246, 0.4);
-      transition: all 0.25s ease;
-      border: 1px solid rgba(255,255,255,0.15);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      z-index: 10;
-      pointer-events: auto;
-    }
-    .ar-btn:hover { transform: translateX(-50%) scale(1.04); background: rgba(123,110,246,1); }
-    .ar-btn:active { transform: translateX(-50%) scale(0.96); }
-    .ar-btn svg { width: 22px; height: 22px; fill: currentColor; }
+/* Reposition + reset zoom */
+#action-row {
+display: flex;
+gap: 8px;
+align-items: center;
+}
+.action-sm {
+width: 40px;
+height: 40px;
+border-radius: 50%;
+border: 1px solid rgba(255, 255, 255, 0.08);
+background: rgba(20, 20, 28, 0.6);
+backdrop-filter: blur(8px);
+-webkit-backdrop-filter: blur(8px);
+color: #d0d0d0;
+font-size: 16px;
+display: flex;
+align-items: center;
+justify-content: center;
+cursor: pointer;
+transition: background 0.2s;
+touch-action: manipulation;
+}
+.action-sm:active {
+transform: scale(0.92);
+}
 
-    /* Contrôles animation */
-    .anim-section {
-      background: rgba(255,255,255,0.04);
-      border-radius: 18px;
-      padding: 14px 16px;
-      margin-bottom: 12px;
-      border: 1px solid rgba(255,255,255,0.06);
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 12px;
-    }
+/* Error modal */
+#error-modal {
+position: fixed;
+inset: 0;
+z-index: 100;
+display: none;
+align-items: center;
+justify-content: center;
+background: rgba(0, 0, 0, 0.7);
+backdrop-filter: blur(8px);
+-webkit-backdrop-filter: blur(8px);
+padding: 24px;
+}
+#error-modal.show {
+display: flex;
+}
+#error-modal .box {
+max-width: 400px;
+width: 100%;
+padding: 28px 24px;
+border-radius: 20px;
+background: #1a1a24;
+border: 1px solid rgba(255, 255, 255, 0.06);
+box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+text-align: center;
+}
+#error-modal .box h3 {
+font-size: 18px;
+font-weight: 600;
+margin-bottom: 8px;
+color: #f87171;
+}
+#error-modal .box p {
+font-size: 14px;
+color: rgba(255, 255, 255, 0.7);
+line-height: 1.5;
+margin-bottom: 20px;
+}
+#error-modal .box button {
+padding: 10px 32px;
+border-radius: 40px;
+border: none;
+background: #6c8cff;
+color: #fff;
+font-size: 15px;
+font-weight: 600;
+cursor: pointer;
+transition: background 0.2s;
+}
+#error-modal .box button:active {
+background: #5a7ae6;
+}
 
-    .anim-label {
-      font-size: 0.85rem;
-      font-weight: 500;
-      color: rgba(255,255,255,0.7);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
+/* Responsive adjustments */
+@media (max-width: 480px) {
+#status-panel {
+top: 12px;
+left: 12px;
+}
+#status-badge {
+font-size: 10px;
+padding: 4px 12px 4px 10px;
+}
+#ar-message {
+font-size: 10px;
+max-width: 200px;
+}
+#placement-hint {
+font-size: 12px;
+padding: 8px 16px;
+bottom: 28px;
+}
+.ctrl-btn {
+width: 42px;
+height: 42px;
+font-size: 17px;
+}
+.audio-btn {
+font-size: 10px;
+padding: 4px 10px;
+}
+.anim-btn {
+font-size: 10px;
+padding: 4px 10px;
+}
+.action-sm {
+width: 36px;
+height: 36px;
+font-size: 14px;
+}
+}
+@media (orientation: landscape) and (max-height: 500px) {
+#placement-hint {
+bottom: 16px;
+font-size: 11px;
+padding: 6px 14px;
+}
+#controls {
+bottom: 12px;
+right: 12px;
+gap: 6px;
+}
+.ctrl-btn {
+width: 36px;
+height: 36px;
+font-size: 15px;
+}
+#status-panel {
+top: 8px;
+left: 8px;
+}
+#status-badge {
+font-size: 9px;
+padding: 3px 10px 3px 8px;
+}
+#ar-message {
+font-size: 9px;
+max-width: 150px;
+}
+}
 
-    .anim-label::before { content: "🔄"; font-size: 1rem; }
+/* Utility */
+.hidden {
+display: none !important;
+}
+.fade-transition {
+transition: opacity 0.3s ease;
+}
 
-    .anim-select {
-      flex: 1;
-      min-width: 120px;
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.12);
-      color: #fff;
-      padding: 8px 12px;
-      border-radius: 40px;
-      font-size: 0.9rem;
-      cursor: pointer;
-      outline: none;
-      appearance: none;
-      -webkit-appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='white' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 12px center;
-      padding-right: 32px;
-    }
-    .anim-select option { background: #1a1a3a; color: #fff; }
-
-    .anim-btn {
-      background: rgba(123, 110, 246, 0.3);
-      border: 1px solid rgba(123, 110, 246, 0.3);
-      color: #fff;
-      padding: 8px 18px;
-      border-radius: 40px;
-      font-weight: 500;
-      font-size: 0.9rem;
-      cursor: pointer;
-      transition: all 0.2s;
-      white-space: nowrap;
-    }
-    .anim-btn:hover { background: rgba(123,110,246,0.5); }
-    .anim-btn:active { transform: scale(0.95); }
-
-    /* Musique */
-    .music-section {
-      background: rgba(255,255,255,0.04);
-      border-radius: 18px;
-      padding: 16px 16px 12px;
-      border: 1px solid rgba(255,255,255,0.06);
-    }
-    .music-title {
-      font-size: 0.85rem;
-      font-weight: 500;
-      color: rgba(255,255,255,0.6);
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .music-title::before { content: "🎵"; font-size: 1.1rem; }
-    .choices { display: flex; gap: 12px; flex-wrap: wrap; }
-    .choice-btn {
-      flex: 1;
-      min-width: 100px;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.1);
-      color: #fff;
-      padding: 10px 0;
-      border-radius: 40px;
-      font-weight: 500;
-      font-size: 0.95rem;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-align: center;
-    }
-    .choice-btn.active { background: rgba(123,110,246,0.35); border-color: #7b6ef6; box-shadow: 0 0 20px rgba(123,110,246,0.15); }
-    .choice-btn:hover { background: rgba(255,255,255,0.12); }
-
-    .player-controls {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      margin-top: 14px;
-      padding-top: 12px;
-      border-top: 1px solid rgba(255,255,255,0.06);
-    }
-    .player-btn {
-      background: rgba(255,255,255,0.08);
-      border: none;
-      color: #fff;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      font-size: 1.2rem;
-      cursor: pointer;
-      transition: background 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: 1px solid rgba(255,255,255,0.06);
-    }
-    .player-btn:hover { background: rgba(255,255,255,0.18); }
-    .volume-slider {
-      flex: 1;
-      -webkit-appearance: none;
-      appearance: none;
-      height: 4px;
-      border-radius: 2px;
-      background: rgba(255,255,255,0.2);
-      outline: none;
-    }
-    .volume-slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: #7b6ef6;
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(123,110,246,0.4);
-    }
-    .volume-slider::-moz-range-thumb {
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: #7b6ef6;
-      cursor: pointer;
-      border: none;
-    }
-
-    .status-text {
-      font-size: 0.75rem;
-      color: rgba(255,255,255,0.3);
-      text-align: center;
-      margin-top: 14px;
-    }
-
-    @media (max-width: 480px) {
-      .container { padding: 16px 14px 20px; }
-      h1 { font-size: 1.4rem; }
-      .ar-btn { padding: 12px 24px; font-size: 1rem; }
-      .choice-btn { min-width: 70px; font-size: 0.85rem; padding: 8px 0; }
-      .anim-section { flex-direction: column; align-items: stretch; }
-      .anim-select { min-width: unset; }
-    }
-
-    model-viewer::part(default-ar-button) { display: none; }
-  </style>
+/* Scrollbar hide */
+::-webkit-scrollbar {
+display: none;
+}
+</style>
 </head>
 <body>
 
-<div class="container">
-  <h1>🤖 AR & Robot Animé</h1>
-  <p class="sub">Objet 3D animé en réalité augmentée</p>
+<!-- LOADING SCREEN -->
+<div id="loading-screen" role="status" aria-label="Chargement">
+<div class="spinner"></div>
+<div class="progress-wrap">
+<div class="progress-bar" id="load-progress"></div>
+</div>
+<div class="status-text" id="load-status">Initialisation…</div>
+</div>
 
-  <!-- Modèle 3D -->
-  <div class="model-wrapper">
-    <model-viewer
-      id="mv"
-      src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Fox/glTF-Binary/Fox.glb"
-      alt="Robot 3D animé"
-      ar
-      ar-modes="webxr scene-viewer quick-look"
-      ar-placement="floor"
-      scale="0.7 0.7 0.7"
-      shadow-intensity="0.6"
-      environment-image="https://modelviewer.dev/shared-assets/environments/moon_1k.hdr"
-      auto-rotate
-      camera-controls
-      disable-zoom
-      touch-action="pan-y"
-      loading="eager"
-      reveal="auto"
-    >
-    </model-viewer>
+<!-- ERROR MODAL -->
+<div id="error-modal" role="alert">
+<div class="box">
+<h3 id="err-title">⚠️ Erreur</h3>
+<p id="err-message">Une erreur est survenue.</p>
+<button id="err-retry">Réessayer</button>
+</div>
+</div>
 
-    <button class="ar-btn" id="arTrigger">
-      <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-      Voir en AR
-    </button>
-  </div>
+<!-- AR VIEWPORT -->
+<div id="ar-container"></div>
 
-  <!-- Contrôle Animation -->
-  <div class="anim-section">
-    <span class="anim-label">Animation</span>
-    <select class="anim-select" id="animSelect">
-      <option value="">Chargement...</option>
-    </select>
-    <button class="anim-btn" id="animPlayBtn">▶️ Jouer</button>
-    <button class="anim-btn" id="animStopBtn">⏹️ Arrêter</button>
-  </div>
+<!-- PLACEMENT HINT -->
+<div id="placement-hint">
+👆 Appuyez pour poser le modèle
+</div>
 
-  <!-- Musique -->
-  <div class="music-section">
-    <div class="music-title">Choisissez votre musique</div>
-    <div class="choices">
-      <button class="choice-btn active" data-track="0">🌿 Ambiance</button>
-      <button class="choice-btn" data-track="1">🚀 Électro</button>
-    </div>
-    <div class="player-controls">
-      <button class="player-btn" id="playPauseBtn">⏸️</button>
-      <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.05" value="0.6" />
-    </div>
-    <div class="status-text" id="statusText">Prêt · appuyez sur lecture</div>
-  </div>
+<!-- STATUS PANEL -->
+<div id="status-panel" class="ui-overlay">
+<div id="status-badge">
+<span class="dot idle" id="status-dot"></span>
+<span id="status-label">Recherche</span>
+</div>
+<div id="ar-message">Orientez l'appareil vers une surface horizontale</div>
+</div>
+
+<!-- CONTROLS -->
+<div id="controls" class="ui-overlay">
+
+<!-- Audio controls -->
+<div id="audio-controls">
+<div id="audio-row">
+<button class="audio-btn" data-track="0" id="track1-btn">🎵 Piste 1</button>
+<button class="audio-btn" data-track="1" id="track2-btn">🎵 Piste 2</button>
+<button class="audio-btn" id="play-pause-btn">⏸️</button>
+</div>
+</div>
+
+<!-- Animation selector -->
+<div id="anim-selector"></div>
+
+<!-- Action row -->
+<div id="action-row">
+<button class="action-sm" id="reposition-btn" aria-label="Repositionner">📍</button>
+<button class="action-sm" id="reset-zoom-btn" aria-label="Réinitialiser le zoom">🔍</button>
+<button class="ctrl-btn" id="toggle-ui-btn" aria-label="Masquer les contrôles">👁️</button>
+</div>
 </div>
 
 <script>
-  (function() {
-    // --- Éléments ---
-    const modelViewer = document.getElementById('mv');
-    const arTrigger = document.getElementById('arTrigger');
-    const animSelect = document.getElementById('animSelect');
-    const animPlayBtn = document.getElementById('animPlayBtn');
-    const animStopBtn = document.getElementById('animStopBtn');
+// ============================================================
+// MAIN APPLICATION — Production WebAR
+// iOS 16+ Safari / Android Chrome (Samsung A15 4G)
+// No WebXR · Three.js · GLB with skeletal animations
+// Horizontal placement via device-orientation fallback
+// ============================================================
 
-    // Audio
-    const audio = new Audio();
-    audio.loop = true;
-    audio.volume = 0.6;
-    const tracks = [
-      'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-      'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3'
-    ];
-    let currentTrack = 0;
-    let isPlaying = false;
+(function() {
+'use strict';
 
-    const choiceBtns = document.querySelectorAll('.choice-btn');
-    const playPauseBtn = document.getElementById('playPauseBtn');
-    const volumeSlider = document.getElementById('volumeSlider');
-    const statusText = document.getElementById('statusText');
+// ---- CONFIG ----
+const CONFIG = {
+modelUrl: 'https://threejs.org/examples/models/gltf/Fox/Fox.gltf',
+// fallback if GLB fails: use a Three.js primitive with bones
+useFallbackModel: true,
+maxZoom: 4.0,
+minZoom: 0.5,
+defaultZoom: 1.0,
+placementDistance: 2.2,
+smoothFactor: 0.08,
+lowMemoryThreshold: 4, // GB of RAM (rough)
+audioTracks: [
+{ name: 'Ambiance', url: null, generated: true },
+{ name: 'Énergique', url: null, generated: true }
+]
+};
 
-    // --- Gestion Audio ---
-    function loadTrack(index) {
-      if (index < 0 || index >= tracks.length) return;
-      currentTrack = index;
-      const wasPlaying = isPlaying;
-      audio.pause();
-      audio.src = tracks[index];
-      audio.load();
-      if (wasPlaying) {
-        audio.play().then(() => { isPlaying = true; updateUI(); }).catch(() => { isPlaying = false; updateUI(); });
-      } else {
-        isPlaying = false;
-        updateUI();
-      }
-      choiceBtns.forEach((btn, i) => btn.classList.toggle('active', i === index));
-      statusText.textContent = wasPlaying ? 'Musique en cours...' : 'Prêt, appuyez sur lecture';
-    }
+// ---- DOM refs ----
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => document.querySelectorAll(s);
 
-    function togglePlay() {
-      if (audio.src === '') loadTrack(0);
-      if (isPlaying) {
-        audio.pause();
-        isPlaying = false;
-      } else {
-        audio.play().then(() => { isPlaying = true; }).catch(() => { isPlaying = false; });
-      }
-      updateUI();
-    }
+const container = $('#ar-container');
+const loadingScreen = $('#loading-screen');
+const loadProgress = $('#load-progress');
+const loadStatus = $('#load-status');
+const errorModal = $('#error-modal');
+const errTitle = $('#err-title');
+const errMessage = $('#err-message');
+const errRetry = $('#err-retry');
+const placementHint = $('#placement-hint');
+const statusDot = $('#status-dot');
+const statusLabel = $('#status-label');
+const arMessage = $('#ar-message');
+const animSelector = $('#anim-selector');
+const repositionBtn = $('#reposition-btn');
+const resetZoomBtn = $('#reset-zoom-btn');
+const toggleUiBtn = $('#toggle-ui-btn');
+const playPauseBtn = $('#play-pause-btn');
+const track1Btn = $('#track1-btn');
+const track2Btn = $('#track2-btn');
 
-    function updateUI() {
-      playPauseBtn.textContent = isPlaying ? '⏸️' : '▶️';
-      statusText.textContent = isPlaying ? '🎶 Musique en cours...' : (audio.src ? '⏸️ Pause' : 'Choisissez une musique');
-    }
+// ---- State ----
+let scene, camera, renderer;
+let videoTexture, videoElement;
+let modelGroup = null;
+let mixer = null;
+let animations = [];
+let currentAnimIndex = 0;
+let modelLoaded = false;
+let modelPlaced = false;
+let isPlacing = false;
 
-    choiceBtns.forEach((btn, index) => {
-      btn.addEventListener('click', () => {
-        if (index === currentTrack && isPlaying) return;
-        loadTrack(index);
-        if (!isPlaying) {
-          audio.play().then(() => { isPlaying = true; updateUI(); }).catch(() => {});
-        }
-      });
-    });
+// Device orientation
+let deviceOrientation = { alpha: 0, beta: 0, gamma: 0 };
+let isDeviceOriented = false;
+let surfaceDetected = false;
 
-    playPauseBtn.addEventListener('click', togglePlay);
-    volumeSlider.addEventListener('input', () => { audio.volume = parseFloat(volumeSlider.value); });
+// Interaction
+let isDragging = false;
+let previousTouch = null;
+let modelRotation = { x: 0, y: 0 };
+let zoomLevel = CONFIG.defaultZoom;
+let targetZoom = CONFIG.defaultZoom;
+let modelPosition = new THREE.Vector3(0, 0, -CONFIG.placementDistance);
 
-    // Préchargement
-    audio.src = tracks[0];
-    audio.load();
-    choiceBtns.forEach((btn, i) => btn.classList.toggle('active', i === 0));
-    updateUI();
+// Audio
+let audioCtx = null;
+let audioNodes = [];
+let currentTrack = 0;
+let isPlaying = false;
+let audioInitialized = false;
 
-    // --- AR ---
-    arTrigger.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (modelViewer.canActivateAR) {
-        modelViewer.activateAR();
-      } else {
-        alert('La réalité augmentée n\'est pas disponible sur cet appareil ou navigateur.\nEssayez avec Chrome (Android) ou Safari (iOS 16.4+).');
-      }
-    });
+// UI visibility
+let uiVisible = true;
+let controlsVisible = true;
 
-    // --- Gestion des animations ---
-    let animationNames = [];
+// Performance
+let lowMemoryMode = false;
+let frameCount = 0;
+let lastFrameTime = 0;
 
-    function populateAnimations() {
-      const animations = modelViewer.model?.animations;
-      if (!animations || animations.length === 0) {
-        animSelect.innerHTML = '<option value="">Aucune animation</option>';
-        return;
-      }
-      animationNames = animations.map(anim => anim.name || 'Animation sans nom');
-      animSelect.innerHTML = '';
-      animationNames.forEach((name) => {
-        const option = document.createElement('option');
-        option.value = name;
-        option.textContent = name;
-        animSelect.appendChild(option);
-      });
-      // Sélectionne la première par défaut
-      if (animationNames.length > 0) {
-        animSelect.value = animationNames[0];
-        // On ne lance pas automatiquement, on laisse l'utilisateur décider
-        animPlayBtn.textContent = '▶️ Jouer';
-      }
-    }
+// ---- Three.js setup ----
+function initScene() {
+scene = new THREE.Scene();
 
-    // Écouter le chargement du modèle
-    modelViewer.addEventListener('load', () => {
-      populateAnimations();
-      // Si une animation existe, on pourrait lancer la première automatiquement ?
-      // On choisit de ne pas le faire pour laisser le contrôle à l'utilisateur.
-    });
+// Camera: perspective, matches phone FOV
+const aspect = window.innerWidth / window.innerHeight;
+const fov = 60;
+camera = new THREE.PerspectiveCamera(fov, aspect, 0.1, 20);
+camera.position.set(0, 0, 0.1);
+camera.lookAt(0, 0, -1);
 
-    // Fonction pour jouer l'animation sélectionnée
-    function playAnimation() {
-      const selected = animSelect.value;
-      if (!selected) {
-        alert('Aucune animation sélectionnée.');
-        return;
-      }
-      try {
-        // Définir le nom de l'animation
-        modelViewer.animationName = selected;
-        // Lancer la lecture
-        modelViewer.play();
-        animPlayBtn.textContent = '⏸️ Pause';
-      } catch (e) {
-        console.warn('Erreur lecture animation :', e);
-        // Fallback : essayer de définir l'attribut et jouer
-        try {
-          modelViewer.setAttribute('animation-name', selected);
-          modelViewer.play();
-          animPlayBtn.textContent = '⏸️ Pause';
-        } catch (e2) {
-          alert('Impossible de jouer l\'animation.');
-        }
-      }
-    }
+renderer = new THREE.WebGLRenderer({
+alpha: false,
+antialias: !lowMemoryMode,
+powerPreference: 'high-performance'
+});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.outputEncoding = THREE.sRGBEncoding;
+container.appendChild(renderer.domElement);
 
-    function pauseAnimation() {
-      try {
-        modelViewer.pause();
-        animPlayBtn.textContent = '▶️ Jouer';
-      } catch (e) {}
-    }
+// Background color (will be covered by video)
+scene.background = new THREE.Color(0x0b0b0e);
+}
 
-    function stopAnimation() {
-      try {
-        modelViewer.stop();
-        animPlayBtn.textContent = '▶️ Jouer';
-      } catch (e) {}
-    }
+// ---- Camera feed ----
+async function initCamera() {
+try {
+const stream = await navigator.mediaDevices.getUserMedia({
+video: {
+facingMode: 'environment',
+width: { ideal: 1280 },
+height: { ideal: 720 },
+frameRate: { ideal: 30 }
+},
+audio: false
+});
 
-    function toggleAnimation() {
-      if (!modelViewer.model) {
-        alert('Le modèle n\'est pas encore chargé.');
-        return;
-      }
-      // Vérifier si l'animation est en cours via la propriété isPlaying
-      const isAnimPlaying = modelViewer.isPlaying;
-      if (isAnimPlaying) {
-        pauseAnimation();
-      } else {
-        playAnimation();
-      }
-    }
+videoElement = document.createElement('video');
+videoElement.srcObject = stream;
+videoElement.setAttribute('playsinline', '');
+videoElement.setAttribute('webkit-playsinline', '');
+videoElement.muted = true;
+videoElement.loop = true;
+await videoElement.play();
 
-    // Événements des boutons
-    animPlayBtn.addEventListener('click', toggleAnimation);
-    animStopBtn.addEventListener('click', stopAnimation);
+videoTexture = new THREE.VideoTexture(videoElement);
+videoTexture.encoding = THREE.sRGBEncoding;
+videoTexture.minFilter = THREE.LinearFilter;
+videoTexture.magFilter = THREE.LinearFilter;
 
-    // Quand l'utilisateur change d'animation, on arrête la précédente
-    animSelect.addEventListener('change', () => {
-      stopAnimation();
-    });
+// Background plane with video
+const geom = new THREE.PlaneGeometry(4, 4);
+const mat = new THREE.MeshBasicMaterial({
+map: videoTexture,
+depthWrite: false,
+depthTest: false,
+toneMapped: false
+});
+const bgMesh = new THREE.Mesh(geom, mat);
+bgMesh.position.set(0, 0, -1);
+bgMesh.scale.set(1, window.innerHeight / window.innerWidth, 1);
+scene.add(bgMesh);
 
-    // Écouter la fin de l'animation pour mettre à jour le bouton
-    modelViewer.addEventListener('finished', () => {
-      animPlayBtn.textContent = '▶️ Jouer';
-    });
+// Update background on resize
+window.addEventListener('resize', () => {
+const aspect = window.innerWidth / window.innerHeight;
+bgMesh.scale.set(aspect > 1 ? aspect : 1, aspect > 1 ? 1 : 1 / aspect, 1);
+});
 
-    // Déverrouillage audio sur iOS (premier clic)
-    document.addEventListener('click', function unlockAudio() {
-      if (audio.paused && audio.src) {
-        audio.play().then(() => { audio.pause(); isPlaying = false; updateUI(); }).catch(() => {});
-      }
-    }, { once: false });
+return true;
+} catch (err) {
+console.warn('Camera error:', err);
+showError('Caméra', 'Impossible d\'accéder à la caméra arrière. Vérifiez les permissions HTTPS.', true);
+return false;
+}
+}
 
-    console.log('AR Robot animé prêt. Animations disponibles :', animationNames);
-  })();
+// ---- Device Orientation ----
+function initDeviceOrientation() {
+if (!window.DeviceOrientationEvent) {
+arMessage.textContent = '⚠️ Orientation non disponible — placement manuel';
+arMessage.className = 'warning';
+return false;
+}
+
+// iOS 13+ requires permission request
+if (typeof DeviceOrientationEvent !== 'undefined' &&
+typeof DeviceOrientationEvent.requestPermission === 'function') {
+DeviceOrientationEvent.requestPermission()
+.then(state => {
+if (state === 'granted') {
+window.addEventListener('deviceorientation', onOrientation);
+isDeviceOriented = true;
+} else {
+arMessage.textContent = '⚠️ Permission d\'orientation refusée — placement manuel';
+arMessage.className = 'warning';
+}
+})
+.catch(() => {
+// fallback: try adding listener anyway
+try {
+window.addEventListener('deviceorientation', onOrientation);
+isDeviceOriented = true;
+} catch (_) {
+arMessage.textContent = '⚠️ Orientation non disponible — placement manuel';
+arMessage.className = 'warning';
+}
+});
+} else {
+try {
+window.addEventListener('deviceorientation', onOrientation);
+isDeviceOriented = true;
+} catch (_) {
+arMessage.textContent = '⚠️ Orientation non disponible — placement manuel';
+arMessage.className = 'warning';
+}
+}
+return true;
+}
+
+function onOrientation(e) {
+if (e.alpha !== null && e.beta !== null && e.gamma !== null) {
+deviceOrientation.alpha = e.alpha;
+deviceOrientation.beta = e.beta;
+deviceOrientation.gamma = e.gamma;
+
+// Detect "horizontal surface" when device is tilted down
+// beta: 0 = flat, 90 = pointing up, -90 = pointing down
+const beta = e.beta;
+const gamma = e.gamma;
+// When beta is around 90° (pointing at ground) and gamma is near 0
+const tilt = Math.abs(beta - 90);
+const roll = Math.abs(gamma);
+// Consider a surface detected when tilt < 25° and roll < 25°
+const detected = tilt < 30 && roll < 30 && beta > 60 && beta < 120;
+
+if (detected && !surfaceDetected) {
+surfaceDetected = true;
+statusDot.className = 'dot ready';
+statusLabel.textContent = 'Surface détectée';
+arMessage.textContent = '✅ Appuyez pour poser le modèle';
+arMessage.className = '';
+placementHint.classList.remove('hidden');
+} else if (!detected && surfaceDetected) {
+surfaceDetected = false;
+statusDot.className = 'dot idle';
+statusLabel.textContent = 'Recherche';
+arMessage.textContent = 'Orientez l\'appareil vers une surface horizontale';
+arMessage.className = '';
+placementHint.classList.add('hidden');
+}
+}
+}
+
+// ---- Model loading ----
+function loadModel() {
+updateLoading(20, 'Chargement du modèle…');
+
+const loader = new THREE.GLTFLoader();
+loader.load(
+CONFIG.modelUrl,
+(gltf) => {
+updateLoading(70, 'Modèle chargé, préparation…');
+onModelLoaded(gltf);
+},
+(xhr) => {
+const pct = Math.round((xhr.loaded / xhr.total) * 50) + 20;
+updateLoading(Math.min(pct, 65), 'Chargement…');
+},
+(err) => {
+console.warn('GLB load error:', err);
+// Fallback: generate a simple model with bones
+if (CONFIG.useFallbackModel) {
+updateLoading(50, 'Utilisation du modèle de secours…');
+createFallbackModel();
+} else {
+showError('Modèle', 'Impossible de charger le modèle 3D.', false);
+}
+}
+);
+}
+
+function onModelLoaded(gltf) {
+const model = gltf.scene;
+// Center and scale
+const box = new THREE.Box3().setFromObject(model);
+const size = box.getSize(new THREE.Vector3());
+const maxDim = Math.max(size.x, size.y, size.z);
+const scale = 1.8 / maxDim;
+model.scale.set(scale, scale, scale);
+model.position.set(0, 0, 0);
+
+modelGroup = new THREE.Group();
+modelGroup.add(model);
+scene.add(modelGroup);
+
+// Initial position: in front of camera
+modelGroup.position.copy(modelPosition);
+
+// Animations
+if (gltf.animations && gltf.animations.length > 0) {
+mixer = new THREE.AnimationMixer(model);
+animations = gltf.animations;
+// Play first animation
+const clip = animations[0];
+const action = mixer.clipAction(clip);
+action.play();
+currentAnimIndex = 0;
+buildAnimationUI();
+} else {
+// No animations: create a simple idle
+createIdleAnimation(model);
+}
+
+modelLoaded = true;
+updateLoading(90, 'Prêt à placer');
+statusDot.className = 'dot idle';
+statusLabel.textContent = 'Modèle chargé';
+
+// Start rendering loop
+animate();
+
+// Auto-detect surface after a short delay
+setTimeout(() => {
+if (!surfaceDetected) {
+arMessage.textContent = '📱 Orientez l\'appareil vers le sol ou une table';
+arMessage.className = '';
+}
+}, 1500);
+
+updateLoading(100, 'Prêt !');
+setTimeout(() => {
+loadingScreen.classList.add('hidden');
+}, 400);
+
+// Enable interactions
+setupInteraction();
+}
+
+// ---- Fallback model (Three.js primitives with bones) ----
+function createFallbackModel() {
+const group = new THREE.Group();
+
+// Simple humanoid with bones
+const bodyMat = new THREE.MeshStandardMaterial({ color: 0x6c8cff, roughness: 0.4, metalness: 0.1 });
+const headMat = new THREE.MeshStandardMaterial({ color: 0xf5cba7, roughness: 0.3 });
+const limbMat = new THREE.MeshStandardMaterial({ color: 0x4a6fa5, roughness: 0.5 });
+
+// Body
+const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.3), bodyMat);
+body.position.y = 0.35;
+group.add(body);
+
+// Head
+const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 12), headMat);
+head.position.set(0, 0.85, 0);
+group.add(head);
+
+// Left arm
+const armL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.5, 0.12), limbMat);
+armL.position.set(-0.35, 0.55, 0);
+group.add(armL);
+
+// Right arm
+const armR = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.5, 0.12), limbMat);
+armR.position.set(0.35, 0.55, 0);
+group.add(armR);
+
+// Left leg
+const legL = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.4, 0.15), limbMat);
+legL.position.set(-0.15, 0.0, 0);
+group.add(legL);
+
+// Right leg
+const legR = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.4, 0.15), limbMat);
+legR.position.set(0.15, 0.0, 0);
+group.add(legR);
+
+// Scale
+group.scale.set(1.2, 1.2, 1.2);
+
+modelGroup = new THREE.Group();
+modelGroup.add(group);
+scene.add(modelGroup);
+modelGroup.position.copy(modelPosition);
+
+modelLoaded = true;
+updateLoading(90, 'Modèle de secours prêt');
+
+// Create a simple bounce animation using sine wave
+createFallbackAnimation(group);
+
+buildAnimationUI();
+statusDot.className = 'dot idle';
+statusLabel.textContent = 'Modèle (secours)';
+
+animate();
+setTimeout(() => {
+loadingScreen.classList.add('hidden');
+}, 400);
+
+setupInteraction();
+arMessage.textContent = '⚠️ Modèle de secours — animations limitées';
+arMessage.className = 'warning';
+}
+
+function createFallbackAnimation(group) {
+// Store original positions for animation
+const parts = group.children;
+const origY = parts.map(p => p.position.y);
+let time = 0;
+
+// Override animate loop to add bounce
+const origAnimate = window._origAnimate;
+window._fallbackAnim = {
+group: group,
+parts: parts,
+origY: origY,
+time: 0,
+update: function(delta) {
+this.time += delta;
+const t = this.time;
+this.parts.forEach((p, i) => {
+const offset = i * 0.3;
+const bob = Math.sin(t * 1.8 + offset) * 0.04;
+p.position.y = this.origY[i] + bob;
+});
+// Rotate arms slightly
+if (this.parts.length >= 4) {
+const armL = this.parts[2];
+const armR = this.parts[3];
+if (armL) armL.rotation.z = Math.sin(t * 1.2) * 0.2 - 0.1;
+if (armR) armR.rotation.z = Math.sin(t * 1.2 + Math.PI) * 0.2 + 0.1;
+}
+}
+};
+}
+
+function createIdleAnimation(model) {
+// Simple rotation animation for models without skeletal animations
+let time = 0;
+const origY = model.position.y;
+window._idleAnim = {
+model: model,
+origY: origY,
+time: 0,
+update: function(delta) {
+this.time += delta;
+this.model.rotation.y += delta * 0.3;
+this.model.position.y = this.origY + Math.sin(this.time * 0.8) * 0.03;
+}
+};
+}
+
+// ---- Animation UI ----
+function buildAnimationUI() {
+animSelector.innerHTML = '';
+const names = animations.length > 0 ?
+animations.map((a, i) => a.name || `Animation ${i+1}`) :
+['Bounce'];
+
+names.forEach((name, idx) => {
+const btn = document.createElement('button');
+btn.className = 'anim-btn' + (idx === currentAnimIndex ? ' active-anim' : '');
+btn.textContent = name.length > 12 ? name.slice(0, 10) + '…' : name;
+btn.dataset.index = idx;
+btn.addEventListener('click', (e) => {
+e.stopPropagation();
+switchAnimation(idx);
+});
+animSelector.appendChild(btn);
+});
+}
+
+function switchAnimation(index) {
+if (!mixer || index >= animations.length) return;
+if (index === currentAnimIndex) return;
+
+// Cross-fade
+const prevAction = mixer._actions && mixer._actions.length > 0 ?
+mixer._actions[0] : null;
+const clip = animations[index];
+const action = mixer.clipAction(clip);
+action.reset();
+action.play();
+
+if (prevAction && prevAction !== action) {
+prevAction.crossFadeTo(action, 0.3, true);
+}
+
+currentAnimIndex = index;
+document.querySelectorAll('.anim-btn').forEach((btn, i) => {
+btn.classList.toggle('active-anim', i === index);
+});
+}
+
+// ---- Audio ----
+function initAudio() {
+if (audioCtx) return;
+try {
+audioCtx = new(window.AudioContext || window.webkitAudioContext)();
+generateAudioTracks();
+audioInitialized = true;
+} catch (e) {
+console.warn('Audio init failed:', e);
+}
+}
+
+function generateAudioTracks() {
+if (!audioCtx) return;
+
+// Track 1: Ambient pad
+const t1 = generateAmbientTrack(audioCtx, 0);
+// Track 2: Rhythmic
+const t2 = generateAmbientTrack(audioCtx, 1);
+
+audioNodes = [t1, t2];
+// Start with track 1
+currentTrack = 0;
+updateAudioUI();
+}
+
+function generateAmbientTrack(ctx, type) {
+const gain = ctx.createGain();
+gain.gain.value = 0;
+gain.connect(ctx.destination);
+
+const nodes = [];
+
+if (type === 0) {
+// Ambient pad: soft drone
+const osc1 = ctx.createOscillator();
+osc1.type = 'sawtooth';
+osc1.frequency.value = 110;
+const osc2 = ctx.createOscillator();
+osc2.type = 'sine';
+osc2.frequency.value = 220;
+const osc3 = ctx.createOscillator();
+osc3.type = 'triangle';
+osc3.frequency.value = 330;
+
+const g1 = ctx.createGain();
+g1.gain.value = 0.06;
+const g2 = ctx.createGain();
+g2.gain.value = 0.04;
+const g3 = ctx.createGain();
+g3.gain.value = 0.03;
+
+osc1.connect(g1);
+g1.connect(gain);
+osc2.connect(g2);
+g2.connect(gain);
+osc3.connect(g3);
+g3.connect(gain);
+
+osc1.start();
+osc2.start();
+osc3.start();
+
+// LFO for movement
+const lfo = ctx.createOscillator();
+lfo.frequency.value = 0.15;
+const lfoGain = ctx.createGain();
+lfoGain.gain.value = 30;
+lfo.connect(lfoGain);
+lfoGain.connect(osc1.frequency);
+lfoGain.connect(osc2.frequency);
+lfoGain.connect(osc3.frequency);
+lfo.start();
+
+nodes.push(osc1, osc2, osc3, lfo, g1, g2, g3, lfoGain);
+} else {
+// Rhythmic: pluck-like arpeggio
+const notes = [220, 277, 330, 392, 440];
+let noteIndex = 0;
+const osc = ctx.createOscillator();
+osc.type = 'sine';
+osc.frequency.value = notes[0];
+const g = ctx.createGain();
+g.gain.value = 0;
+osc.connect(g);
+g.connect(gain);
+
+const osc2 = ctx.createOscillator();
+osc2.type = 'square';
+osc2.frequency.value = 110;
+const g2 = ctx.createGain();
+g2.gain.value = 0;
+osc2.connect(g2);
+g2.connect(gain);
+
+osc.start();
+osc2.start();
+
+// Simple sequencer
+let step = 0;
+const interval = setInterval(() => {
+if (!isPlaying) return;
+const freq = notes[step % notes.length];
+osc.frequency.setTargetAtTime(freq, ctx.currentTime, 0.02);
+g.gain.setTargetAtTime(0.08, ctx.currentTime, 0.01);
+g.gain.setTargetAtTime(0, ctx.currentTime + 0.08, 0.02);
+
+// Bass drum on every 4th
+if (step % 4 === 0) {
+osc2.frequency.setTargetAtTime(80 + Math.random() * 20, ctx.currentTime, 0.01);
+g2.gain.setTargetAtTime(0.12, ctx.currentTime, 0.01);
+g2.gain.setTargetAtTime(0, ctx.currentTime + 0.06, 0.02);
+}
+step++;
+}, 120);
+
+nodes.push(osc, osc2, g, g2);
+nodes._interval = interval;
+}
+
+nodes._gain = gain;
+return nodes;
+}
+
+function togglePlayPause() {
+if (!audioInitialized) {
+initAudio();
+if (!audioInitialized) return;
+}
+
+if (audioCtx.state === 'suspended') {
+audioCtx.resume();
+}
+
+isPlaying = !isPlaying;
+const gain = audioNodes[currentTrack]?._gain;
+if (gain) {
+const val = isPlaying ? 0.3 : 0;
+gain.gain.setTargetAtTime(val, audioCtx.currentTime, 0.05);
+}
+updateAudioUI();
+}
+
+function switchTrack(index) {
+if (!audioInitialized || index === currentTrack) return;
+// Fade out current
+const oldGain = audioNodes[currentTrack]?._gain;
+if (oldGain) {
+oldGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+}
+currentTrack = index;
+const newGain = audioNodes[currentTrack]?._gain;
+if (newGain && isPlaying) {
+newGain.gain.setTargetAtTime(0.3, audioCtx.currentTime + 0.1, 0.05);
+}
+updateAudioUI();
+}
+
+function updateAudioUI() {
+track1Btn.classList.toggle('track-active', currentTrack === 0);
+track2Btn.classList.toggle('track-active', currentTrack === 1);
+playPauseBtn.textContent = isPlaying ? '⏸️' : '▶️';
+playPauseBtn.classList.toggle('track-playing', isPlaying);
+}
+
+// ---- Interaction ----
+function setupInteraction() {
+const canvas = renderer.domElement;
+
+// Tap to place / reposition
+canvas.addEventListener('click', (e) => {
+if (!modelLoaded) return;
+if (modelPlaced) {
+// Reposition: move model to where user tapped
+repositionModel();
+} else {
+placeModel();
+}
+});
+
+// Touch events for drag & pinch
+let touches = [];
+let lastTouchDist = 0;
+let lastTouchCenter = { x: 0, y: 0 };
+
+canvas.addEventListener('touchstart', (e) => {
+e.preventDefault();
+touches = e.touches;
+if (touches.length === 1) {
+isDragging = true;
+previousTouch = { x: touches[0].clientX, y: touches[0].clientY };
+} else if (touches.length === 2) {
+isDragging = false;
+lastTouchDist = getTouchDist(touches);
+const center = getTouchCenter(touches);
+lastTouchCenter = center;
+}
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+e.preventDefault();
+const newTouches = e.touches;
+if (newTouches.length === 1 && isDragging && modelPlaced) {
+const dx = newTouches[0].clientX - previousTouch.x;
+const dy = newTouches[0].clientY - previousTouch.y;
+// Rotate model
+const sensitivity = 0.008;
+modelRotation.y += dx * sensitivity;
+modelRotation.x += dy * sensitivity;
+modelRotation.x = Math.max(-1.2, Math.min(1.2, modelRotation.x));
+if (modelGroup) {
+modelGroup.rotation.x = modelRotation.x;
+modelGroup.rotation.y = modelRotation.y;
+}
+previousTouch = { x: newTouches[0].clientX, y: newTouches[0].clientY };
+} else if (newTouches.length === 2 && modelPlaced) {
+// Pinch zoom
+const dist = getTouchDist(newTouches);
+const delta = dist - lastTouchDist;
+const zoomDelta = delta * 0.005;
+targetZoom = Math.max(CONFIG.minZoom, Math.min(CONFIG.maxZoom, targetZoom + zoomDelta));
+zoomLevel = targetZoom;
+applyZoom();
+lastTouchDist = dist;
+}
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+isDragging = false;
+previousTouch = null;
+});
+
+// Reposition button
+repositionBtn.addEventListener('click', (e) => {
+e.stopPropagation();
+if (modelLoaded) repositionModel();
+});
+
+// Reset zoom
+resetZoomBtn.addEventListener('click', (e) => {
+e.stopPropagation();
+targetZoom = CONFIG.defaultZoom;
+zoomLevel = targetZoom;
+applyZoom();
+});
+
+// Toggle UI
+toggleUiBtn.addEventListener('click', (e) => {
+e.stopPropagation();
+uiVisible = !uiVisible;
+document.querySelectorAll('.ui-overlay, #placement-hint').forEach(el => {
+el.style.opacity = uiVisible ? '1' : '0';
+el.style.pointerEvents = uiVisible ? 'auto' : 'none';
+});
+});
+
+// Audio controls
+playPauseBtn.addEventListener('click', (e) => {
+e.stopPropagation();
+togglePlayPause();
+});
+track1Btn.addEventListener('click', (e) => {
+e.stopPropagation();
+if (!audioInitialized) initAudio();
+switchTrack(0);
+});
+track2Btn.addEventListener('click', (e) => {
+e.stopPropagation();
+if (!audioInitialized) initAudio();
+switchTrack(1);
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+if (e.key === ' ' || e.key === 'Space') {
+e.preventDefault();
+togglePlayPause();
+}
+if (e.key === 'r' || e.key === 'R') {
+repositionModel();
+}
+});
+}
+
+function placeModel() {
+if (!modelLoaded || isPlacing) return;
+if (modelPlaced) return;
+
+isPlacing = true;
+statusDot.className = 'dot placing';
+statusLabel.textContent = 'Placement…';
+
+// Position model at the detected surface
+const dist = CONFIG.placementDistance;
+// Use camera direction + slight downward tilt based on device orientation
+const dir = new THREE.Vector3(0, 0, -1);
+// Apply device orientation to direction
+if (isDeviceOriented) {
+const beta = (deviceOrientation.beta || 0) * Math.PI / 180;
+const gamma = (deviceOrientation.gamma || 0) * Math.PI / 180;
+// Tilt the placement direction based on device orientation
+const tiltX = -gamma * 0.5;
+const tiltY = -(beta - 90) * 0.3 * Math.PI / 180;
+dir.x += tiltX;
+dir.y += tiltY;
+dir.normalize();
+}
+
+const pos = new THREE.Vector3(0, 0, 0).add(dir.multiplyScalar(dist));
+// Slightly lower for better placement
+pos.y -= 0.3;
+
+modelGroup.position.copy(pos);
+modelGroup.rotation.x = 0;
+modelGroup.rotation.y = 0;
+modelRotation.x = 0;
+modelRotation.y = 0;
+
+modelPlaced = true;
+isPlacing = false;
+statusDot.className = 'dot ready';
+statusLabel.textContent = 'Modèle posé';
+arMessage.textContent = '👆 Faites glisser pour tourner · pincer pour zoomer';
+arMessage.className = '';
+placementHint.classList.add('hidden');
+
+// Reset zoom to default on placement
+targetZoom = CONFIG.defaultZoom;
+zoomLevel = targetZoom;
+applyZoom();
+}
+
+function repositionModel() {
+if (!modelLoaded || !modelPlaced) return;
+modelPlaced = false;
+statusDot.className = 'dot idle';
+statusLabel.textContent = 'Repositionnement';
+arMessage.textContent = '👆 Appuyez pour repositionner le modèle';
+arMessage.className = '';
+placementHint.classList.remove('hidden');
+// Animate model out
+modelGroup.position.set(0, 0, -CONFIG.placementDistance * 0.5);
+}
+
+function applyZoom() {
+if (!modelGroup) return;
+const baseDist = CONFIG.placementDistance;
+const dist = baseDist / zoomLevel;
+// Adjust position along camera Z
+const dir = new THREE.Vector3(0, 0, -1);
+if (isDeviceOriented) {
+const beta = (deviceOrientation.beta || 0) * Math.PI / 180;
+const gamma = (deviceOrientation.gamma || 0) * Math.PI / 180;
+const tiltX = -gamma * 0.5;
+const tiltY = -(beta - 90) * 0.3 * Math.PI / 180;
+dir.x += tiltX;
+dir.y += tiltY;
+dir.normalize();
+}
+const pos = new THREE.Vector3(0, 0, 0).add(dir.multiplyScalar(dist));
+pos.y -= 0.3;
+modelGroup.position.copy(pos);
+}
+
+function getTouchDist(touches) {
+if (touches.length < 2) return 0;
+const dx = touches[0].clientX - touches[1].clientX;
+const dy = touches[0].clientY - touches[1].clientY;
+return Math.sqrt(dx * dx + dy * dy);
+}
+
+function getTouchCenter(touches) {
+if (touches.length < 2) return { x: 0, y: 0 };
+return {
+x: (touches[0].clientX + touches[1].clientX) / 2,
+y: (touches[0].clientY + touches[1].clientY) / 2
+};
+}
+
+// ---- Render loop ----
+let lastDelta = 0;
+
+function animate() {
+requestAnimationFrame(animate);
+
+const now = performance.now();
+const delta = Math.min((now - lastFrameTime) / 1000, 0.05);
+lastFrameTime = now;
+
+// Update video texture
+if (videoTexture) {
+videoTexture.needsUpdate = true;
+}
+
+// Update animation mixer
+if (mixer) {
+mixer.update(delta);
+} else if (window._fallbackAnim) {
+window._fallbackAnim.update(delta);
+} else if (window._idleAnim) {
+window._idleAnim.update(delta);
+}
+
+// Smooth zoom
+if (Math.abs(zoomLevel - targetZoom) > 0.001) {
+zoomLevel += (targetZoom - zoomLevel) * 0.08;
+applyZoom();
+}
+
+renderer.render(scene, camera);
+}
+
+// ---- Helpers ----
+function updateLoading(pct, text) {
+loadProgress.style.width = Math.min(pct, 100) + '%';
+if (text) loadStatus.textContent = text;
+}
+
+function showError(title, message, isFatal) {
+errTitle.textContent = '⚠️ ' + title;
+errMessage.textContent = message;
+errorModal.classList.add('show');
+if (isFatal) {
+// Keep loading screen visible
+} else {
+loadingScreen.classList.add('hidden');
+}
+}
+
+function hideError() {
+errorModal.classList.remove('show');
+}
+
+// ---- Responsive ----
+function onResize() {
+const w = window.innerWidth;
+const h = window.innerHeight;
+if (camera) {
+camera.aspect = w / h;
+camera.updateProjectionMatrix();
+}
+if (renderer) {
+renderer.setSize(w, h);
+}
+// Update background plane
+const bg = scene.children.find(c => c.isMesh && c.material.map === videoTexture);
+if (bg) {
+const aspect = w / h;
+bg.scale.set(aspect > 1 ? aspect : 1, aspect > 1 ? 1 : 1 / aspect, 1);
+}
+}
+
+// ---- Low memory detection ----
+function detectLowMemory() {
+try {
+// Rough estimate: if device has less than 4GB RAM
+if (navigator.deviceMemory && navigator.deviceMemory < CONFIG.lowMemoryThreshold) {
+lowMemoryMode = true;
+return true;
+}
+// Check if on Samsung A15 or similar mid-range
+const ua = navigator.userAgent;
+if (ua.includes('Samsung') && (ua.includes('A15') || ua.includes('A14') || ua.includes('A13'))) {
+lowMemoryMode = true;
+return true;
+}
+// iOS: check if older iPhone
+if (/iPhone|iPad/.test(ua)) {
+const match = ua.match(/iPhone OS (\d+)_/);
+if (match && parseInt(match[1]) < 16) {
+lowMemoryMode = true;
+return true;
+}
+}
+} catch (_) {}
+return false;
+}
+
+// ---- Graceful fallback explanation ----
+function showFallbackNotice() {
+// This is shown in the UI already via arMessage
+console.info('WebAR: Utilisation du fallback basé sur l\'orientation. ' +
+'La détection de plan horizontal est approximative. ' +
+'Pour une AR précise, utilisez un navigateur avec WebXR.');
+}
+
+// ---- Main init ----
+async function init() {
+try {
+// Detect low memory
+detectLowMemory();
+if (lowMemoryMode) {
+console.info('Mode basse mémoire activé');
+// Reduce render quality
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.2));
+}
+
+// Init Three.js
+initScene();
+
+// Camera
+const camOk = await initCamera();
+if (!camOk) {
+// Continue without camera (show error but still load model)
+showError('Caméra', 'Caméra non disponible. Le modèle sera affiché sans fond vidéo.', false);
+// Use a dark background
+scene.background = new THREE.Color(0x1a1a24);
+}
+
+// Device orientation
+initDeviceOrientation();
+
+// Show fallback notice
+showFallbackNotice();
+
+// Load model
+loadModel();
+
+// Resize handler
+window.addEventListener('resize', onResize);
+window.addEventListener('orientationchange', () => {
+setTimeout(onResize, 300);
+});
+
+// Error retry
+errRetry.addEventListener('click', () => {
+hideError();
+if (!modelLoaded) {
+loadModel();
+}
+});
+
+} catch (err) {
+console.error('Init error:', err);
+showError('Initialisation', 'Une erreur critique est survenue. Vérifiez votre connexion.', true);
+}
+}
+
+// ---- Start ----
+if (document.readyState === 'loading') {
+document.addEventListener('DOMContentLoaded', init);
+} else {
+init();
+}
+
+// Handle visibility change to pause/resume
+document.addEventListener('visibilitychange', () => {
+if (document.hidden) {
+// Pause audio if needed
+if (audioCtx && audioCtx.state === 'running') {
+audioCtx.suspend();
+}
+} else {
+if (audioCtx && audioCtx.state === 'suspended' && isPlaying) {
+audioCtx.resume();
+}
+}
+});
+
+})();
 </script>
 
 </body>
