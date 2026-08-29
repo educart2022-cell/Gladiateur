@@ -1,16 +1,348 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8" />
-    <!-- Redirection immédiate vers la page cible -->
-    <meta http-equiv="refresh" content="0; url=https://projects.web-ar.studio/v2/65addc51a1" />
-    <title>Redirection automatique</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Visionneuse RA — Placez l'objet 3D</title>
+
+<!-- ==========================================================
+     COMPOSANT <model-viewer> (Google) : gère WebXR (Android),
+     Scene Viewer (Android/ARCore) et AR Quick Look (iOS Safari)
+     depuis un seul élément HTML, sans app native à installer.
+     ========================================================== -->
+<script type="module" src="https://unpkg.com/@google/model-viewer@3.5.0/dist/model-viewer.min.js"></script>
+
+<style>
+  :root{
+    --bg:        #0a0d12;
+    --panel:     rgba(16, 21, 28, 0.72);
+    --line:      rgba(255,255,255,0.10);
+    --cyan:      #46e0c4;
+    --amber:     #ffb86b;
+    --text:      #eef4f2;
+    --text-dim:  #93a1a0;
+    --radius:    18px;
+  }
+
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  html,body{
+    margin:0; padding:0; height:100%; overflow:hidden;
+    background:var(--bg); color:var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  h1,.brand{
+    font-family: 'Space Grotesk', 'Inter', sans-serif;
+  }
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    position:fixed; top:0; left:0; right:0;
+    padding: calc(env(safe-area-inset-top, 0px) + 14px) 18px 10px;
+    display:flex; align-items:center; justify-content:space-between;
+    z-index:20; pointer-events:none;
+  }
+  .brand{
+    font-size:15px; font-weight:600; letter-spacing:0.02em;
+    display:flex; align-items:center; gap:8px;
+    color:var(--text);
+    text-shadow: 0 2px 12px rgba(0,0,0,0.6);
+  }
+  .brand .dot{
+    width:7px; height:7px; border-radius:50%;
+    background:var(--cyan);
+    box-shadow: 0 0 10px var(--cyan);
+  }
+  .hint{
+    font-size:11.5px; color:var(--text-dim);
+    text-shadow: 0 2px 10px rgba(0,0,0,0.7);
+  }
+
+  /* ---------- viewer ---------- */
+  model-viewer{
+    width:100%; height:100%;
+    --poster-color: transparent;
+    background: radial-gradient(120% 100% at 50% 20%, #131a22 0%, #0a0d12 60%);
+  }
+
+  /* corner reticle — signature element evoking surface-scan / AR framing */
+  .reticle{
+    position:fixed; inset:0; pointer-events:none; z-index:5;
+    display:flex; align-items:flex-end; justify-content:center;
+    padding-bottom: 34vh;
+  }
+  .reticle svg{ width:min(62vw,260px); height:auto; opacity:0.55; }
+  .reticle .corner{ stroke:var(--cyan); stroke-width:2; fill:none; }
+  @keyframes pulse{
+    0%,100%{ opacity:.35; } 50%{ opacity:.85; }
+  }
+  .reticle.scanning svg{ animation: pulse 2.2s ease-in-out infinite; }
+  .reticle.locked{ display:none; }
+
+  /* ---------- progress ---------- */
+  .progress-wrap{
+    position:fixed; left:50%; bottom:128px; transform:translateX(-50%);
+    z-index:15; width:min(220px,60vw);
+    height:3px; border-radius:3px; background:rgba(255,255,255,0.12);
+    overflow:hidden;
+  }
+  .progress-bar{
+    height:100%; width:0%; background:var(--cyan);
+    transition: width .15s linear;
+  }
+  .progress-wrap.done{ display:none; }
+
+  /* ---------- bottom control panel ---------- */
+  .panel{
+    position:fixed; left:16px; right:16px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+    z-index:20;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    padding:14px;
+    display:flex; flex-direction:column; gap:12px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+  }
+
+  .row{ display:flex; align-items:center; gap:10px; }
+
+  .tracks{ display:flex; gap:8px; flex:1; }
+  .track-btn{
+    flex:1; display:flex; flex-direction:column; align-items:flex-start;
+    gap:2px; padding:9px 12px; border-radius:12px;
+    border:1px solid var(--line); background:rgba(255,255,255,0.03);
+    color:var(--text-dim); font-size:12px; cursor:pointer;
+    transition: border-color .2s, color .2s, background .2s;
+  }
+  .track-btn .name{ font-weight:600; font-size:12.5px; color:var(--text); }
+  .track-btn.active{
+    border-color:var(--amber);
+    background:rgba(255,184,107,0.10);
+    color:var(--amber);
+  }
+  .track-btn.active .name{ color:var(--amber); }
+
+  .icon-btn{
+    width:40px; height:40px; flex:0 0 auto;
+    border-radius:50%; border:1px solid var(--line);
+    background:rgba(255,255,255,0.04);
+    display:flex; align-items:center; justify-content:center;
+    color:var(--text); cursor:pointer;
+  }
+  .icon-btn svg{ width:18px; height:18px; }
+  .icon-btn.muted{ color:var(--text-dim); }
+
+  #ar-btn{
+    width:100%; border:none; border-radius:14px;
+    padding:14px; font-size:14.5px; font-weight:700;
+    letter-spacing:0.01em;
+    background:linear-gradient(180deg, var(--cyan), #29b39c);
+    color:#04211c; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  #ar-btn:active{ transform:scale(0.98); }
+  #ar-btn svg{ width:18px; height:18px; }
+
+  #ar-btn[disabled]{
+    background:rgba(255,255,255,0.08); color:var(--text-dim);
+  }
+
+  .status{
+    text-align:center; font-size:11px; color:var(--text-dim);
+    min-height:14px;
+  }
+</style>
 </head>
 <body>
-    <!-- Message affiché si la redirection ne s'effectue pas -->
-    <p>
-        Si vous n'êtes pas redirigé automatiquement,
-        <a href="https://projects.web-ar.studio/v2/65addc51a1">cliquez ici</a>.
-    </p>
+
+  <div class="topbar">
+    <div class="brand"><span class="dot"></span>Visionneuse RA</div>
+    <div class="hint" id="device-hint">Chargement du modèle…</div>
+  </div>
+
+  <div class="reticle scanning" id="reticle">
+    <svg viewBox="0 0 200 200">
+      <path class="corner" d="M14 60 V18 H56"/>
+      <path class="corner" d="M144 18 H186 V60"/>
+      <path class="corner" d="M186 140 V182 H144"/>
+      <path class="corner" d="M56 182 H14 V140"/>
+    </svg>
+  </div>
+
+  <div class="progress-wrap" id="progress-wrap">
+    <div class="progress-bar" id="progress-bar"></div>
+  </div>
+
+  <!--
+    ============================================================
+    MODEL-VIEWER
+    - src        : modèle .glb (glTF binaire) avec animation de squelette
+    - ios-src    : optionnel. Si omis, Safari génère un USDZ à la volée
+                   pour AR Quick Look (iOS 12+, donc compatible iOS 16+).
+    - ar-modes   : ordre de préférence des moteurs AR
+        webxr        -> Android Chrome (WebXR Device API)
+        scene-viewer -> Android via ARCore (fallback fiable)
+        quick-look   -> iOS Safari (AR Quick Look / USDZ)
+    - autoplay   : lance l'animation du squelette dès le chargement
+    - ar-placement="floor" : ancre l'objet sur une surface plane détectée
+    ============================================================
+  -->
+  <model-viewer
+    id="viewer"
+    src="https://modelviewer.dev/shared-assets/models/RobotExpressive.glb"
+    alt="Objet 3D animé à placer en réalité augmentée"
+    ar
+    ar-modes="webxr scene-viewer quick-look"
+    ar-placement="floor"
+    ar-scale="auto"
+    camera-controls
+    touch-action="pan-y"
+    shadow-intensity="1.1"
+    exposure="1"
+    environment-image="neutral"
+    autoplay
+    animation-crossfade-duration="300"
+    loading="eager"
+    reveal="auto">
+
+    <!-- Bouton AR personnalisé (remplace le bouton par défaut du composant) -->
+    <button slot="ar-button" id="ar-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 2 3 7v10l9 5 9-5V7z"/><path d="M3 7l9 5 9-5"/><path d="M12 12v10"/>
+      </svg>
+      Voir en réalité augmentée
+    </button>
+  </model-viewer>
+
+  <div class="panel">
+    <div class="status" id="status"></div>
+
+    <div class="row">
+      <div class="tracks">
+        <button class="track-btn" id="track1-btn" type="button">
+          <span class="name">Piste 1</span>
+          <span>Ambiance douce</span>
+        </button>
+        <button class="track-btn" id="track2-btn" type="button">
+          <span class="name">Piste 2</span>
+          <span>Ambiance rythmée</span>
+        </button>
+      </div>
+      <button class="icon-btn" id="mute-btn" type="button" aria-label="Couper le son">
+        <svg id="mute-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!--
+    Musiques de fond : deux pistes au choix, jouées en boucle.
+    Remplacez ces src par vos propres fichiers (mp3/m4a, libres de droits
+    ou sous licence adaptée). Le nom de fichier ne fait ici qu'illustrer
+    l'emplacement attendu, à côté de ce fichier index.html.
+  -->
+  <audio id="track1" src="audio/ambiance-douce.mp3" loop preload="none"></audio>
+  <audio id="track2" src="audio/ambiance-rythmee.mp3" loop preload="none"></audio>
+
+<script>
+  const viewer      = document.getElementById('viewer');
+  const reticle      = document.getElementById('reticle');
+  const progressWrap = document.getElementById('progress-wrap');
+  const progressBar  = document.getElementById('progress-bar');
+  const statusEl     = document.getElementById('status');
+  const deviceHint   = document.getElementById('device-hint');
+  const arBtn        = document.getElementById('ar-btn');
+
+  const tracks = {
+    1: { el: document.getElementById('track1'), btn: document.getElementById('track1-btn') },
+    2: { el: document.getElementById('track2'), btn: document.getElementById('track2-btn') }
+  };
+  let activeTrack = null;
+  let muted = false;
+
+  // --- Chargement du modèle ---
+  viewer.addEventListener('progress', (e) => {
+    const pct = Math.round(e.detail.totalProgress * 100);
+    progressBar.style.width = pct + '%';
+  });
+  viewer.addEventListener('load', () => {
+    progressWrap.classList.add('done');
+    reticle.classList.remove('scanning');
+    reticle.classList.add('locked');
+    deviceHint.textContent = 'Modèle prêt';
+  });
+  viewer.addEventListener('error', () => {
+    statusEl.textContent = "Impossible de charger le modèle 3D.";
+  });
+
+  // --- Détection simple de plateforme pour un message d'aide contextuel ---
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (ua.includes('Macintosh') && 'ontouchend' in document);
+  const isAndroid = /Android/.test(ua);
+  if (isIOS) {
+    deviceHint.textContent = 'iOS · AR Quick Look';
+  } else if (isAndroid) {
+    deviceHint.textContent = 'Android · ARCore requis';
+  } else {
+    deviceHint.textContent = 'Ouvrez ce lien sur mobile';
+  }
+
+  // --- Statut AR ---
+  viewer.addEventListener('ar-status', (e) => {
+    switch (e.detail.status) {
+      case 'not-presenting':
+        statusEl.textContent = '';
+        break;
+      case 'session-started':
+        statusEl.textContent = 'Déplacez le téléphone pour détecter une surface plane, puis touchez pour poser l’objet.';
+        break;
+      case 'object-placed':
+        statusEl.textContent = 'Objet placé.';
+        break;
+      case 'failed':
+        statusEl.textContent = "La RA n'est pas disponible sur cet appareil/navigateur.";
+        arBtn.disabled = true;
+        break;
+    }
+  });
+
+  // --- Gestion des deux pistes de musique de fond ---
+  function stopAllTracks(){
+    Object.values(tracks).forEach(t => { t.el.pause(); t.el.currentTime = 0; t.btn.classList.remove('active'); });
+  }
+
+  function playTrack(id){
+    const t = tracks[id];
+    if (activeTrack === id) {
+      // ré-appui sur la piste active -> on l'arrête
+      stopAllTracks();
+      activeTrack = null;
+      return;
+    }
+    stopAllTracks();
+    t.el.muted = muted;
+    t.el.play().catch(() => {
+      statusEl.textContent = "Ajoutez vos fichiers audio dans /audio pour activer la musique.";
+    });
+    t.btn.classList.add('active');
+    activeTrack = id;
+  }
+
+  tracks[1].btn.addEventListener('click', () => playTrack(1));
+  tracks[2].btn.addEventListener('click', () => playTrack(2));
+
+  const muteBtn = document.getElementById('mute-btn');
+  muteBtn.addEventListener('click', () => {
+    muted = !muted;
+    Object.values(tracks).forEach(t => t.el.muted = muted);
+    muteBtn.classList.toggle('muted', muted);
+  });
+</script>
+
 </body>
 </html>
